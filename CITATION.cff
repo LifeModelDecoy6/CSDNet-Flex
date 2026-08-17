@@ -5,9 +5,12 @@ type: software
 authors:
   - family-names: Cheng
     given-names: Shuo
-affiliation: Imperial College London
+    affiliation: Imperial College London
 version: 0.1.0
 date-released: 2026-08-17
+doi: 10.5281/zenodo.21980242
+repository-code: https://github.com/LifeModelDecoy6/CSDNet-Flex
+url: https://doi.org/10.5281/zenodo.21980242
 license: Apache-2.0
 keywords:
   - molecular generation
@@ -15,4 +18,3 @@ keywords:
   - SMILES
   - drug discovery
   - molecular optimization
-

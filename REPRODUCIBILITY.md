@@ -2,7 +2,8 @@
 
 ## Evidence hierarchy
 
-The Zenodo archive is the authoritative frozen record. It contains the exact
+The [Zenodo archive](https://doi.org/10.5281/zenodo.21980242) is the
+authoritative frozen record. It contains the exact
 checkpoint, raw generated molecules, all 90 Lead terminal cells, all 69 PMO
 histories, aggregate tables, and SHA-256 checksums. This GitHub repository is a
 lighter code distribution with compact summaries.
@@ -72,4 +73,3 @@ the benchmark-aware auditor without importing the GPU model stack.
 The PBS files preserve the reported CX3 resource requests and command-line
 arguments. Their root paths and notification addresses are placeholders. Set
 `ROOT`, checkpoint paths, and scheduler resources for the target cluster.
-

@@ -11,8 +11,8 @@
 - Position encoding: rotary
 - Checkpoint: EMA weights at optimizer step 50,000
 
-The exact hyperparameters are recorded in the companion Zenodo file
-`model/checkpoint_metadata.json`.
+The exact hyperparameters are recorded in `model/checkpoint_metadata.json` in
+the [companion Zenodo release](https://doi.org/10.5281/zenodo.21980242).
 
 ## Training
 
@@ -47,4 +47,3 @@ synthetic, safety, and experimental assessment.
 
 All headline results use the same frozen pre-ZINC-fine-tuning checkpoint. See
 `REPRODUCIBILITY.md` and `manifests/final_result_lock.json`.
-

@@ -27,8 +27,7 @@ All values are means over three random seeds.
 
 Compact aggregate tables are in `results_summary/`. The checkpoint, raw
 generated molecules, full optimization histories, and integrity manifests are
-distributed in the companion Zenodo record. The DOI will be added here after
-the record is published.
+distributed in the [companion Zenodo release](https://doi.org/10.5281/zenodo.21980242).
 
 ## Repository layout
 
@@ -59,7 +58,8 @@ docking configuration.
 
 ## Checkpoint placement
 
-Download `model/last.ckpt` from the companion Zenodo record and place it at:
+Download `model/last.ckpt` from the
+[companion Zenodo release](https://doi.org/10.5281/zenodo.21980242) and place it at:
 
 ```text
 checkpoints/csdnet_6m_loflex_geometric_genmol50k/last.ckpt
@@ -105,5 +105,5 @@ third-party components. Copyright and modification notices are summarized in
 
 ## Citation
 
-Use the metadata in `CITATION.cff`. Add the final dissertation citation and
-Zenodo DOI once they are assigned.
+Use the metadata in `CITATION.cff` and cite the archived release using
+[DOI 10.5281/zenodo.21980242](https://doi.org/10.5281/zenodo.21980242).
