@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use CSDNet, please cite this dissertation and the archived release."
+title: "CSDNet: Chemically Guided Variable-Length Masked Discrete Diffusion for Molecular Generation and Optimization"
+type: software
+authors:
+  - family-names: Cheng
+    given-names: Shuo
+affiliation: Imperial College London
+version: 0.1.0
+date-released: 2026-08-17
+license: Apache-2.0
+keywords:
+  - molecular generation
+  - masked discrete diffusion
+  - SMILES
+  - drug discovery
+  - molecular optimization
+

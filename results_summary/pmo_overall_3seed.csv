@@ -1,0 +1,2 @@
+mode,oracle_calls_per_task,n_seeds,n_tasks,sum_auc_top10_3seed_mean,sum_auc_top10_3seed_std,mean_auc_top10_over_tasks_and_seeds,sum_of_per_task_auc_top10_means
+elastic_frontier_prescreen,10000,3,23,17.663580937443502,0.2012220036485068,0.7679817798888477,17.6635809374435

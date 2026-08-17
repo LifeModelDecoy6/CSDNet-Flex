@@ -1,0 +1,9 @@
+scope,seed,sim_threshold,terminal_cells,result_cells,done_zero_cells,oracle_calls,strict_successes,strict_score_signed,three_seed_mean,three_seed_sample_std
+seed,0,0.4,15,15,0,3376,15,-172.79999999999998,,
+seed,0,0.6,15,12,3,1242,11,-118.80000000000001,,
+seed,1,0.4,15,15,0,3842,15,-178.79999999999995,,
+seed,1,0.6,15,13,2,1216,12,-133.9,,
+seed,2,0.4,15,15,0,3987,15,-177.0,,
+seed,2,0.6,15,12,3,1184,12,-129.4,,
+three_seed,,0.4,45,45,0,11205,45,,-176.2,3.078960863668121
+three_seed,,0.6,45,37,8,3642,35,,-127.36666666666667,7.752633961005336

@@ -1,0 +1,9 @@
+hidden_size: 768
+num_layers: 12
+num_heads: 12
+intermediate: 3072
+lr: 2.0e-4
+warmup_steps: 8000
+batch_size: 256
+cbi_weight: 2.0
+aromatic_cbi_weight: 3.0

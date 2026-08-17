@@ -1,0 +1,153 @@
+#!/bin/bash
+#PBS -N ffinal4
+#PBS -q v1_gpu72
+#PBS -l select=1:ncpus=8:mem=32gb:ngpus=1:gpu_type=RTX6000
+#PBS -l walltime=06:00:00
+#PBS -o /path/to/CSDNet/logs/fragment_final_v4_out.log
+#PBS -e /path/to/CSDNet/logs/fragment_final_v4_err.log
+#PBS -M your.email@example.org
+#PBS -m abe
+
+set -euo pipefail
+
+ROOT="${ROOT:-/path/to/CSDNet}"
+TASK_INDEX="${TASK_INDEX:?TASK_INDEX=0..4 is required}"
+SEED="${SEED:?SEED=0,1,2 is required}"
+CKPT_PATH="${CKPT_PATH:-csdnet_checkpoints_6m_loflex_geometric_genmol50k/last.ckpt}"
+PRIOR="${FRAGMENT_LENGTH_PRIOR:-data/zinc250k_fragment_gap_prior_atom256.json}"
+OUT_DIR="${OUT_DIR:-CSDNet/exp/frag/results/native_final_v4_base50k_3seeds}"
+
+cd "$ROOT"
+mkdir -p logs "$OUT_DIR"
+module load Python/3.10.8-GCCcore-12.2.0
+source "${VENV_PATH:-$ROOT/.venv}/bin/activate"
+export PYTHONPATH="$ROOT:${PYTHONPATH:-}"
+export PYTHONUNBUFFERED=1
+export TOKENIZERS_PARALLELISM=false
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export TF_CPP_MIN_LOG_LEVEL=3
+
+TASKS=(
+    linker_design
+    scaffold_morphing
+    motif_extension
+    scaffold_decoration
+    superstructure_generation
+)
+if ! [[ "$TASK_INDEX" =~ ^[0-4]$ ]] || ! [[ "$SEED" =~ ^[0-2]$ ]]; then
+    echo "TASK_INDEX must be 0..4 and SEED must be 0..2"
+    exit 2
+fi
+TASK="${TASKS[$TASK_INDEX]}"
+
+for REQUIRED in \
+    "$CKPT_PATH" "$PRIOR" csdnet_vocab.pkl data/fragments.csv \
+    CSDNet/util/fsm.py CSDNet/util/elastic_sampling.py \
+    CSDNet/exp/frag/direct_infill.py \
+    CSDNet/exp/frag/run_native_projected_infill.py
+do
+    if [ ! -s "$REQUIRED" ]; then
+        echo "Missing or empty required file: $REQUIRED"
+        exit 2
+    fi
+done
+grep -Fq '"structural_feasible"' CSDNet/exp/frag/direct_infill.py || {
+    echo "Final structural gap policy is missing"
+    exit 2
+}
+grep -Fq 'sequence_validators=' CSDNet/util/elastic_sampling.py || {
+    echo "Protected-condition repair is missing"
+    exit 2
+}
+
+JOB_TAG="${PBS_JOBID:-manual}"
+LIVE_LOG="logs/fragment_final_v4_${TASK}_seed${SEED}_${JOB_TAG}_live.log"
+exec > >(tee -a "$LIVE_LOG") 2>&1
+
+echo "Fragment final-v4 start: task=$TASK seed=$SEED time=$(date)"
+echo "Checkpoint=$CKPT_PATH prior=$PRIOR output=$OUT_DIR"
+echo "Policy: 100% validated exploration arm + atom-bounded gaps + condition repair"
+nvidia-smi --query-gpu=index,name,memory.total,memory.free --format=csv,noheader
+
+python - <<'PY' || exit 3
+import torch
+from CSDNet.exp.frag.direct_infill import native_sampler_arm
+
+arms = [
+    native_sampler_arm(
+        attempt_index=i,
+        case_seed=17,
+        exploration_fraction=1.0,
+        policy="fixed_diversity",
+    )
+    for i in range(100)
+]
+assert arms == ["exploration"] * 100
+if not torch.cuda.is_available():
+    raise RuntimeError("CUDA is unavailable")
+x = torch.ones(1, device="cuda")
+torch.cuda.synchronize()
+print("CUDA/policy preflight passed:", torch.cuda.get_device_name(0), x.item())
+PY
+
+python -m CSDNet.exp.frag.run_native_projected_infill \
+    --task "$TASK" \
+    --ckpt_path "$CKPT_PATH" \
+    --vocab csdnet_vocab.pkl \
+    --fragments_csv data/fragments.csv \
+    --output_dir "$OUT_DIR" \
+    --seed "$SEED" \
+    --resume \
+    --num_samples 100 \
+    --max_len 256 \
+    --batch_size 64 \
+    --n_steps 1024 \
+    --temperature 1.08 \
+    --top_k 0 \
+    --top_p 0.80 \
+    --nucleus_min_tokens_start 8 \
+    --nucleus_min_tokens_end 2 \
+    --nucleus_support_policy multi_anchor_annealed \
+    --sampler_portfolio_policy fixed_diversity \
+    --diversity_fraction 1.0 \
+    --diversity_temperature 1.08 \
+    --diversity_top_p 0.80 \
+    --diversity_nucleus_min_tokens_start 8 \
+    --diversity_nucleus_min_tokens_end 2 \
+    --diversity_unmask_selection top_prob \
+    --max_insertions_per_step 4 \
+    --gap_insertion_mode recursive \
+    --gap_constraint_policy structural_feasible \
+    --insertion_rate_policy geometry_adaptive \
+    --length_prefill_policy zinc_geometry_calibrated \
+    --fragment_length_prior "$PRIOR" \
+    --max_prefill_tokens_per_gap 16 \
+    --condition_repair \
+    --max_sample_retries 3 \
+    --violation_neighborhood 2 \
+    --fsm_repair_progressive_steps 8
+
+python - "$OUT_DIR" "$TASK" "$SEED" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+output = Path(sys.argv[1])
+task = sys.argv[2]
+seed = int(sys.argv[3])
+with (output / f"attempts_{task}_seed{seed}.csv").open(newline="") as handle:
+    attempts = list(csv.DictReader(handle))
+with (output / f"metrics_{task}_seed{seed}.csv").open(newline="") as handle:
+    metrics = list(csv.DictReader(handle))
+if len(attempts) != 1000 or len(metrics) != 10:
+    raise SystemExit(f"Incomplete result: attempts={len(attempts)} metrics={len(metrics)}")
+if {row["sampler_arm"] for row in attempts} != {"exploration"}:
+    raise SystemExit("Final-v4 did not use the exploration arm exclusively")
+if {row["gap_constraint_policy"] for row in attempts} != {"structural_feasible"}:
+    raise SystemExit("Final-v4 structural policy metadata is inconsistent")
+if {row["condition_validator_enabled"] for row in attempts} != {"True"}:
+    raise SystemExit("Protected-condition repair was not enabled")
+print(f"Final-v4 audit passed: task={task} seed={seed}")
+PY
+
+echo "Fragment final-v4 done: task=$TASK seed=$SEED time=$(date)"

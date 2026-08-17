@@ -1,0 +1,129 @@
+#!/bin/bash
+#PBS -N csdnet6m
+#PBS -q v1_gpu72
+#PBS -l select=1:ncpus=16:mem=64gb:ngpus=4:gpu_type=RTX6000
+#PBS -l walltime=48:00:00
+
+set -euo pipefail
+
+ROOT="${ROOT:-${PBS_O_WORKDIR:-$(pwd)}}"
+VENV_PATH="${VENV_PATH:-$ROOT/.venv}"
+CHECKPOINT_DIR="${CHECKPOINT_DIR:-checkpoints/csdnet_6m_loflex_geometric_genmol50k}"
+
+cd "$ROOT"
+mkdir -p logs "$CHECKPOINT_DIR"
+if command -v module >/dev/null 2>&1; then
+    module load Python/3.10.8-GCCcore-12.2.0 || true
+fi
+source "$VENV_PATH/bin/activate"
+
+export PYTHONPATH="$ROOT:${PYTHONPATH:-}"
+export PYTHONUNBUFFERED=1
+export TOKENIZERS_PARALLELISM=false
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+if [ -z "${HF_TOKEN:-}" ]; then
+    echo "HF_TOKEN must be exported before qsub." >&2
+    exit 2
+fi
+
+python - <<'PY'
+import torch
+
+if torch.cuda.device_count() != 4:
+    raise RuntimeError(f"Expected four GPUs, found {torch.cuda.device_count()}")
+for index in range(4):
+    torch.ones(1, device=f"cuda:{index}").sum().item()
+    torch.cuda.synchronize(index)
+print("Four-GPU CUDA preflight passed")
+PY
+
+RESUME=()
+if [ -s "$CHECKPOINT_DIR/last.ckpt" ]; then
+    RESUME=(--resume_from_checkpoint "$CHECKPOINT_DIR/last.ckpt")
+fi
+
+python train_csdnet_elastic_hf_streaming.py \
+    --vocab csdnet_vocab.pkl \
+    --hf_dataset datamol-io/safe-gpt \
+    --hf_split train \
+    --smiles_col auto \
+    --safe_col safe \
+    --hf_token_env HF_TOKEN \
+    --max_len 256 \
+    --max_position_embeddings 256 \
+    --dynamic_padding \
+    --pad_to_multiple_of 8 \
+    --batch_size 256 \
+    --num_workers 4 \
+    --shuffle_buffer 50000 \
+    --stream_retries 20 \
+    --stream_retry_backoff 30 \
+    --max_steps 50000 \
+    --max_time 02:00:00:00 \
+    --lr 1e-4 \
+    --min_lr 1e-6 \
+    --warmup_steps 2000 \
+    --lr_schedule cosine \
+    --weight_decay 0.01 \
+    --adam_beta1 0.9 \
+    --adam_beta2 0.98 \
+    --adam_eps 1e-8 \
+    --accumulate_grad_batches 2 \
+    --gradient_clip_val 1.0 \
+    --ema_decay 0.9999 \
+    --disable_cbi \
+    --normalized_cbi \
+    --aromatic_cbi_weight 1.2 \
+    --aromatic_cbi_final_weight 1.0 \
+    --aromatic_cbi_anneal_start_fraction 0.10 \
+    --aromatic_cbi_anneal_end_fraction 0.90 \
+    --structured_corruption_prob 0.0 \
+    --fragment_corruption_prob 0.15 \
+    --fragment_internal_probability 0.25 \
+    --fragment_terminal_probability 0.25 \
+    --fragment_dual_probability 0.25 \
+    --fragment_multi_probability 0.25 \
+    --mdm_corruption_prob 0.10 \
+    --refine_corruption_prob 0.05 \
+    --structured_span_min 2 \
+    --structured_span_max 16 \
+    --refine_fraction_min 0.05 \
+    --refine_fraction_max 0.20 \
+    --papl_alpha 3.0 \
+    --papl_tau 1.0 \
+    --hidden_size 256 \
+    --num_layers 8 \
+    --num_heads 8 \
+    --intermediate 1024 \
+    --position_embedding_type rotary \
+    --rate_min 0.0 \
+    --rate_max 100.0 \
+    --rate_initial 1.0 \
+    --rate_parameterization exp \
+    --theta_rate_min 0.0 \
+    --phi_rate_min 1.01 \
+    --rate_output_bias -4.0 \
+    --fixed_unmask_rate 1.0 \
+    --kuma_shape_a 1.0 \
+    --insertion_loss_weight 1.0 \
+    --reinforce_weight 1.0 \
+    --schedule_regularizer_weight 1.0 \
+    --loflex_aligned \
+    --policy_time_conditioning \
+    --length_loss_normalizer 256 \
+    --precision 16-mixed \
+    --devices 4 \
+    --strategy ddp_find_unused_parameters_false \
+    --seed 42 \
+    --require_complete \
+    --checkpoint_dir "$CHECKPOINT_DIR" \
+    --checkpoint_every_n_steps 1000 \
+    --run_name csdnet-6m-loflex-geometric-genmol50k \
+    "${RESUME[@]}"
+
+python scripts/audit_loflex_aligned_6m.py \
+    --vocab csdnet_vocab.pkl \
+    --checkpoint "$CHECKPOINT_DIR/last.ckpt" \
+    --expected_global_step 50000
+

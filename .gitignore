@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.DS_Store
+logs/
+results/
+checkpoints/
+*.ckpt
+wandb/
+data/zinc250k.csv
+**/tmp/
+

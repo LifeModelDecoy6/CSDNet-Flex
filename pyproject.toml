@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "csdnet-molecular-generation"
+version = "0.1.0"
+description = "Chemically guided variable-length masked discrete diffusion for molecular generation and optimization"
+readme = "README.md"
+requires-python = ">=3.10,<3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Shuo Cheng" }]
+dependencies = [
+  "torch==2.6.0",
+  "lightning==2.5.1",
+  "transformers==4.52.4",
+  "datasets==2.18.0",
+  "numpy==1.26.4",
+  "pandas==2.1.4",
+  "scipy==1.15.3",
+  "scikit-learn==1.2.2",
+  "rdkit==2026.3.1",
+  "datamol==0.12.5",
+  "safe-mol==0.1.14",
+  "PyTDC==0.4.1",
+  "guacamol==0.5.5",
+  "openbabel-wheel==3.1.1.22",
+  "PyYAML==6.0.3",
+  "tqdm==4.67.3",
+  "einops==0.7.0",
+  "easydict==1.13",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8,<9"]
+
+[tool.setuptools]
+include-package-data = true
+py-modules = [
+  "csdnet_hf_smiles",
+  "csdnet_tokenizer",
+  "evaluate_genmol_denovo_metrics",
+  "train_csdnet_elastic_hf_streaming",
+  "train_csdnet_hf_streaming",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["CSDNet*", "scripts*"]
+
+[tool.setuptools.package-data]
+"CSDNet.config" = ["*.json", "*.yaml"]
+"CSDNet.exp.pmo" = ["vocab/*.csv"]
+"scripts.exps.lead.docking" = ["*.csv", "*.pdbqt", "qvina02"]

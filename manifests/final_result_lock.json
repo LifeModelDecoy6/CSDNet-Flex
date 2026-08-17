@@ -1,0 +1,155 @@
+{
+  "lock_version": 2,
+  "description": "Archive-layout result lock derived from the authoritative source-workspace lock.",
+  "checkpoint": "model/last.ckpt",
+  "benchmarks": {
+    "denovo": {
+      "directory": "results/denovo/csdnet_6m_loflex_geometric_base50k_denovo_3seed",
+      "aggregate": "elastic_loflex_3seed.csv",
+      "runs": "elastic_loflex_3seed_runs.csv",
+      "profile": "elastic_loflex",
+      "steps": 1000,
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "molecules_per_seed": 1000,
+      "expected": {
+        "Validity_mean": 1.0,
+        "UniquenessTotal_mean": 0.929,
+        "Quality_mean": 0.8243333333333333,
+        "Diversity_mean": 0.8131762009551595
+      }
+    },
+    "fragment_infill": {
+      "directory": "results/fragment_infill/native_final_v4_base50k_3seeds",
+      "aggregate": "native_final_v4_base50k_3seed_overall.csv",
+      "by_task_seed": "native_final_v4_base50k_3seed_by_task_seed.csv",
+      "tasks": [
+        "linker_design",
+        "motif_extension",
+        "scaffold_decoration",
+        "scaffold_morphing",
+        "superstructure_generation"
+      ],
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "cases_per_task_seed": 10,
+      "proposals_per_task_seed": 1000,
+      "expected": {
+        "validity_mean": 0.9382666666666667,
+        "uniqueness_mean": 0.7595501050559947,
+        "quality_mean": 0.3285333333333333,
+        "diversity_mean": 0.5056763340803017
+      },
+      "note": "This is the accepted complete three-seed result. The later native_final_v5_diversity_guarded directory contains seed-0 screening only and is not an article result."
+    },
+    "lead": {
+      "directory_prefix": "results/lead/seed",
+      "audit_directory": "results/lead/three_seed_audit",
+      "audit_runs": "lead_audit_runs.csv",
+      "audit_chunks": "lead_audit_chunks.csv",
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "targets": [
+        "parp1",
+        "fa7",
+        "5ht1b",
+        "braf",
+        "jak2"
+      ],
+      "start_indices": [
+        0,
+        1,
+        2
+      ],
+      "thresholds": [
+        0.4,
+        0.6
+      ],
+      "max_iterations": 10,
+      "expected_done_zero_by_seed": {
+        "0": 3,
+        "1": 2,
+        "2": 3
+      },
+      "expected_seed_score_sums": {
+        "0": {
+          "0.4": -172.8,
+          "0.6": -118.8
+        },
+        "1": {
+          "0.4": -178.8,
+          "0.6": -133.9
+        },
+        "2": {
+          "0.4": -177.0,
+          "0.6": -129.4
+        }
+      },
+      "expected_three_seed": {
+        "0.4": {
+          "mean": -176.2,
+          "sample_std": 3.078960863668131
+        },
+        "0.6": {
+          "mean": -127.36666666666667,
+          "sample_std": 7.752633961005344
+        }
+      },
+      "note": "A DONE_ZERO cell is a completed protocol outcome after 10 iterations with no feasible docking candidate. It intentionally has no result CSV and contributes zero to the signed docking-score sum."
+    },
+    "pmo": {
+      "directory_prefix": "results/pmo/seed",
+      "summary_directory": "results/pmo/three_seed_summary",
+      "mode": "elastic_frontier_prescreen",
+      "seeds": [
+        0,
+        1,
+        2
+      ],
+      "tasks": [
+        "albuterol_similarity",
+        "amlodipine_mpo",
+        "celecoxib_rediscovery",
+        "deco_hop",
+        "drd2",
+        "fexofenadine_mpo",
+        "gsk3b",
+        "isomers_c7h8n2o2",
+        "isomers_c9h10n2o2pf2cl",
+        "jnk3",
+        "median1",
+        "median2",
+        "mestranol_similarity",
+        "osimertinib_mpo",
+        "perindopril_mpo",
+        "qed",
+        "ranolazine_mpo",
+        "scaffold_hop",
+        "sitagliptin_mpo",
+        "thiothixene_rediscovery",
+        "troglitazone_rediscovery",
+        "valsartan_smarts",
+        "zaleplon_mpo"
+      ],
+      "oracle_calls_per_task": 10000,
+      "expected_seed_sums": {
+        "0": 17.8721,
+        "1": 17.4705,
+        "2": 17.6482
+      },
+      "expected_three_seed": {
+        "mean": 17.6636,
+        "sample_std": 0.2012
+      }
+    }
+  }
+}

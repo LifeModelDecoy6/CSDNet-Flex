@@ -1,0 +1,60 @@
+# GenMol-capacity Elastic CSDNet with learned insertion and fixed unmask rate.
+# Effective global batch: 16 samples/GPU * 4 GPUs * 32 accumulation = 2048.
+max_len: 256
+dynamic_padding: true
+pad_to_multiple_of: 8
+max_position_embeddings: 257
+batch_size: 16
+num_workers: 4
+shuffle_buffer: 50000
+
+hidden_size: 768
+num_layers: 12
+num_heads: 12
+intermediate: 3072
+hidden_dropout_prob: 0.1
+attention_probs_dropout_prob: 0.1
+layer_norm_eps: 1.0e-12
+initializer_range: 0.02
+position_embedding_type: rotary
+disable_gradient_checkpointing: false
+
+use_cbi: true
+cbi_weight: 2.0
+normalized_cbi: true
+aromatic_cbi_weight: 1.2
+aromatic_cbi_final_weight: 1.2
+aromatic_cbi_anneal_start_fraction: 0.1
+aromatic_cbi_anneal_end_fraction: 0.9
+structured_corruption_prob: 0.1
+structured_span_min: 2
+structured_span_max: 8
+
+rate_min: 0.001
+rate_max: 20.0
+rate_initial: 1.0
+fixed_unmask_rate: 1.0
+kuma_shape_a: 2.0
+insertion_loss_weight: 1.0
+reinforce_weight: 1.0
+schedule_regularizer_weight: 1.0
+
+max_steps: 50000
+lr: 3.0e-4
+warmup_steps: 2500
+lr_schedule: constant_with_warmup
+weight_decay: 0.0
+adam_beta1: 0.9
+adam_beta2: 0.999
+adam_eps: 1.0e-8
+ema_decay: 0.9999
+
+devices: 4
+strategy: ddp
+precision: 16-mixed
+accumulate_grad_batches: 32
+gradient_clip_val: 1.0
+checkpoint_every_n_steps: 5000
+checkpoint_dir: csdnet_checkpoints_90m_genmol_elastic_normcbi
+run_name: csdnet-90m-genmol-elastic-normcbi
+seed: 42

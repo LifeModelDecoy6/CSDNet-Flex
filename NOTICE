@@ -1,0 +1,20 @@
+CSDNet
+Copyright 2026 Shuo Cheng.
+
+This distribution contains extensive modifications and additions developed for
+the MSc Digital Chemistry dissertation "CSDNet: Chemically Guided
+Variable-Length Masked Discrete Diffusion for Molecular Generation and
+Optimization" at Imperial College London.
+
+Portions of the software are derived from GenMol:
+Copyright 2025 NVIDIA Corporation and affiliates.
+GenMol source code is distributed under the Apache License 2.0.
+
+The Lead docking interface records that it was modified from MOOD, which is
+distributed under the MIT License. PMO, MDLM, SAFE, FlashAttention, and genetic
+algorithm components retain their original notices and licences. Complete
+texts are provided in LICENSES/third_party/.
+
+The CSDNet checkpoint in the companion research-data release was trained from
+random initialization; it is not a redistributed GenMol checkpoint.
+

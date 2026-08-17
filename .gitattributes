@@ -1,0 +1,7 @@
+*.pkl binary
+*.pdbqt text eol=lf
+*.csv text eol=lf
+*.json text eol=lf
+*.sh text eol=lf
+*.pbs text eol=lf
+

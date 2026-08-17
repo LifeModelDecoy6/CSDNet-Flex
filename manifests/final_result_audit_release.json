@@ -1,0 +1,204 @@
+{
+  "audited_at_utc": "2026-08-17T12:11:26.999355+00:00",
+  "benchmarks": {
+    "denovo": {
+      "directory": "results/denovo/csdnet_6m_loflex_geometric_base50k_denovo_3seed",
+      "generated_lines": {
+        "0": 1000,
+        "1": 1000,
+        "2": 1000
+      },
+      "metrics": {
+        "Diversity_mean": 0.8131762009551595,
+        "Quality_mean": 0.8243333333333333,
+        "UniquenessTotal_mean": 0.9289999999999999,
+        "Validity_mean": 1.0
+      },
+      "profile": "elastic_loflex",
+      "seeds": [
+        0,
+        1,
+        2
+      ]
+    },
+    "fragment_infill": {
+      "attempt_rows": 15000,
+      "directory": "results/fragment_infill/native_final_v4_base50k_3seeds",
+      "metrics": {
+        "diversity_mean": 0.5056763340803017,
+        "quality_mean": 0.3285333333333333,
+        "uniqueness_mean": 0.7595501050559947,
+        "validity_mean": 0.9382666666666667
+      },
+      "task_seed_cells": 15,
+      "version_note": "This is the accepted complete three-seed result. The later native_final_v5_diversity_guarded directory contains seed-0 screening only and is not an article result."
+    },
+    "lead": {
+      "audit_directory": "results/lead/three_seed_audit",
+      "directory_prefix": "results/lead/seed",
+      "done_zero_cells": 8,
+      "protocol_note": "A DONE_ZERO cell is a completed protocol outcome after 10 iterations with no feasible docking candidate. It intentionally has no result CSV and contributes zero to the signed docking-score sum.",
+      "result_cells": 82,
+      "status_by_seed": {
+        "0": {
+          "DONE": 27,
+          "DONE_ZERO": 3
+        },
+        "1": {
+          "DONE": 28,
+          "DONE_ZERO": 2
+        },
+        "2": {
+          "DONE": 27,
+          "DONE_ZERO": 3
+        }
+      },
+      "summary_rows": [
+        {
+          "done_zero_cells": 0,
+          "oracle_calls": 3376,
+          "result_cells": 15,
+          "scope": "seed",
+          "seed": 0,
+          "sim_threshold": 0.4,
+          "strict_score_signed": -172.79999999999998,
+          "strict_successes": 15,
+          "terminal_cells": 15,
+          "three_seed_mean": "",
+          "three_seed_sample_std": ""
+        },
+        {
+          "done_zero_cells": 3,
+          "oracle_calls": 1242,
+          "result_cells": 12,
+          "scope": "seed",
+          "seed": 0,
+          "sim_threshold": 0.6,
+          "strict_score_signed": -118.80000000000001,
+          "strict_successes": 11,
+          "terminal_cells": 15,
+          "three_seed_mean": "",
+          "three_seed_sample_std": ""
+        },
+        {
+          "done_zero_cells": 0,
+          "oracle_calls": 3842,
+          "result_cells": 15,
+          "scope": "seed",
+          "seed": 1,
+          "sim_threshold": 0.4,
+          "strict_score_signed": -178.79999999999995,
+          "strict_successes": 15,
+          "terminal_cells": 15,
+          "three_seed_mean": "",
+          "three_seed_sample_std": ""
+        },
+        {
+          "done_zero_cells": 2,
+          "oracle_calls": 1216,
+          "result_cells": 13,
+          "scope": "seed",
+          "seed": 1,
+          "sim_threshold": 0.6,
+          "strict_score_signed": -133.9,
+          "strict_successes": 12,
+          "terminal_cells": 15,
+          "three_seed_mean": "",
+          "three_seed_sample_std": ""
+        },
+        {
+          "done_zero_cells": 0,
+          "oracle_calls": 3987,
+          "result_cells": 15,
+          "scope": "seed",
+          "seed": 2,
+          "sim_threshold": 0.4,
+          "strict_score_signed": -177.0,
+          "strict_successes": 15,
+          "terminal_cells": 15,
+          "three_seed_mean": "",
+          "three_seed_sample_std": ""
+        },
+        {
+          "done_zero_cells": 3,
+          "oracle_calls": 1184,
+          "result_cells": 12,
+          "scope": "seed",
+          "seed": 2,
+          "sim_threshold": 0.6,
+          "strict_score_signed": -129.4,
+          "strict_successes": 12,
+          "terminal_cells": 15,
+          "three_seed_mean": "",
+          "three_seed_sample_std": ""
+        },
+        {
+          "done_zero_cells": 0,
+          "oracle_calls": 11205,
+          "result_cells": 45,
+          "scope": "three_seed",
+          "seed": "",
+          "sim_threshold": 0.4,
+          "strict_score_signed": "",
+          "strict_successes": 45,
+          "terminal_cells": 45,
+          "three_seed_mean": -176.2,
+          "three_seed_sample_std": 3.078960863668121
+        },
+        {
+          "done_zero_cells": 8,
+          "oracle_calls": 3642,
+          "result_cells": 37,
+          "scope": "three_seed",
+          "seed": "",
+          "sim_threshold": 0.6,
+          "strict_score_signed": "",
+          "strict_successes": 35,
+          "terminal_cells": 45,
+          "three_seed_mean": -127.36666666666667,
+          "three_seed_sample_std": 7.752633961005336
+        }
+      ],
+      "terminal_cells": 90,
+      "three_seed": {
+        "0.4": {
+          "mean": -176.2,
+          "sample_std": 3.078960863668121,
+          "seed_sums": [
+            -172.79999999999998,
+            -178.79999999999995,
+            -177.0
+          ]
+        },
+        "0.6": {
+          "mean": -127.36666666666667,
+          "sample_std": 7.752633961005336,
+          "seed_sums": [
+            -118.80000000000001,
+            -133.9,
+            -129.4
+          ]
+        }
+      }
+    },
+    "pmo": {
+      "directory_prefix": "results/pmo/seed",
+      "mode": "elastic_frontier_prescreen",
+      "oracle_calls_per_history": 10000,
+      "seed_sums": {
+        "0": 17.872052105314648,
+        "1": 17.470490843902905,
+        "2": 17.648199863112954
+      },
+      "summary_directory": "results/pmo/three_seed_summary",
+      "task_seed_histories": 69,
+      "three_seed_mean": 17.663580937443502,
+      "three_seed_sample_std": 0.2012220036485068
+    }
+  },
+  "checkpoint": "model/last.ckpt",
+  "lock": "manifests/final_result_lock.json",
+  "lock_version": 2,
+  "root": ".",
+  "status": "PASS"
+}

@@ -1,0 +1,212 @@
+#!/bin/bash
+#PBS -N b6dn_c2x2
+#PBS -q v1_gpu72
+#PBS -l select=1:ncpus=8:mem=32gb:ngpus=1:gpu_type=RTX6000
+#PBS -l walltime=02:00:00
+#PBS -M your.email@example.org
+#PBS -m abe
+
+set -euo pipefail
+
+ROOT="${ROOT:-/path/to/CSDNet}"
+CONSTRAINT_MODE="${CONSTRAINT_MODE:?Use none, fsm_only, rdkit_only, or full}"
+CKPT_PATH="${CKPT_PATH:-csdnet_checkpoints_6m_loflex_geometric_genmol50k/last.ckpt}"
+N_STEPS="${N_STEPS:-1000}"
+BASE_OUT="${BASE_OUT:-results/csdnet_6m_loflex_base50k_constraint_factorial_raw}"
+
+case "$CONSTRAINT_MODE" in
+    none)
+        PROFILE="elastic_loflex_constraint_none"
+        EXPECTED_FSM="false"
+        EXPECTED_RDKIT="false"
+        ;;
+    fsm_only)
+        PROFILE="elastic_loflex_constraint_fsm_only"
+        EXPECTED_FSM="true"
+        EXPECTED_RDKIT="false"
+        ;;
+    rdkit_only)
+        PROFILE="elastic_loflex_constraint_rdkit_only"
+        EXPECTED_FSM="false"
+        EXPECTED_RDKIT="true"
+        ;;
+    full)
+        PROFILE="elastic_loflex_constraint_full"
+        EXPECTED_FSM="true"
+        EXPECTED_RDKIT="true"
+        ;;
+    *)
+        echo "Invalid CONSTRAINT_MODE=$CONSTRAINT_MODE"
+        exit 2
+        ;;
+esac
+
+cd "$ROOT"
+mkdir -p logs "$BASE_OUT/$CONSTRAINT_MODE"
+module load Python/3.10.8-GCCcore-12.2.0
+source "${VENV_PATH:-$ROOT/.venv}/bin/activate"
+
+export PYTHONPATH="$ROOT:${PYTHONPATH:-}"
+export PYTHONUNBUFFERED=1
+export TOKENIZERS_PARALLELISM=false
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+for REQUIRED in "$CKPT_PATH" csdnet_vocab.pkl; do
+    if [ ! -s "$REQUIRED" ]; then
+        echo "Missing or empty required file: $REQUIRED"
+        exit 2
+    fi
+done
+
+python - "$PROFILE" "$EXPECTED_FSM" "$EXPECTED_RDKIT" <<'PY'
+import pickle
+import sys
+from CSDNet.exp.denovo.sampler_profiles import (
+    SAMPLER_PROFILES,
+    SAMPLER_RUNTIME_OVERRIDES,
+)
+from CSDNet.util.fsm import ValenceFSMTracker, prepare_rdkit_kekulize_checker
+from CSDNet.util.tokenizer import SMILESTokenizer
+
+profile, expected_fsm, expected_rdkit = sys.argv[1:]
+expected = {
+    "disable_fsm_check": expected_fsm != "true",
+    "disable_rdkit_kekulize_check": expected_rdkit != "true",
+    "strict_final_sanitize": False,
+}
+if SAMPLER_PROFILES[profile] != SAMPLER_PROFILES["elastic_loflex"]:
+    raise SystemExit(f"{profile} changes the production sampler schedule")
+if SAMPLER_RUNTIME_OVERRIDES.get(profile) != expected:
+    raise SystemExit(f"Unexpected runtime overrides for {profile}")
+with open("csdnet_vocab.pkl", "rb") as handle:
+    tokenizer = SMILESTokenizer(pickle.load(handle))
+tracker = ValenceFSMTracker(tokenizer) if expected_fsm == "true" else None
+if expected_rdkit == "true" and prepare_rdkit_kekulize_checker(
+    tokenizer,
+    tracker,
+) is None:
+    raise SystemExit("RDKit constraint was requested but RDKit is unavailable")
+print("Factorial profile preflight passed:", profile, expected)
+PY
+
+export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
+if [ -z "${HF_TOKEN:-}" ]; then
+    for TOKEN_FILE in \
+        "$HF_HOME/token" \
+        "$HOME/.cache/huggingface/token" \
+        "$HOME/.huggingface/token"; do
+        if [ -s "$TOKEN_FILE" ]; then
+            HF_TOKEN="$(tr -d '\r\n' < "$TOKEN_FILE")"
+            export HF_TOKEN
+            break
+        fi
+    done
+fi
+if [ -z "${HF_TOKEN:-}" ]; then
+    echo "HF_TOKEN is unavailable."
+    exit 2
+fi
+
+JOB_TAG="${PBS_JOBID:-manual}"
+LIVE_LOG="logs/base6m_constraint_2x2_${CONSTRAINT_MODE}_${JOB_TAG}_live.log"
+exec > >(tee -a "$LIVE_LOG") 2>&1
+
+echo "Constraint factorial start: mode=$CONSTRAINT_MODE time=$(date)"
+echo "Checkpoint=$CKPT_PATH profile=$PROFILE steps=$N_STEPS"
+echo "Protocol: raw 1000 proposals/seed; no rejection, refill, or strict sanitization"
+nvidia-smi --query-gpu=index,name,memory.total,memory.free --format=csv,noheader
+
+python - <<'PY'
+import torch
+if not torch.cuda.is_available():
+    raise RuntimeError("CUDA is unavailable")
+torch.ones(1, device="cuda").sum().item()
+print("CUDA preflight passed:", torch.cuda.get_device_name(0))
+PY
+
+for SEED in 0 1 2; do
+    RUN_DIR="$BASE_OUT/$CONSTRAINT_MODE/steps${N_STEPS}/${PROFILE}/seed${SEED}"
+    mkdir -p "$RUN_DIR"
+    START_SECONDS=$(date +%s)
+
+    python -m CSDNet.exp.denovo.evaluate \
+        --ckpt_path "$CKPT_PATH" \
+        --hf_dataset datamol-io/safe-gpt \
+        --hf_split train \
+        --hf_smiles_col auto \
+        --hf_safe_col safe \
+        --hf_streaming \
+        --hf_token_env HF_TOKEN \
+        --hf_ref_sample_n 50000 \
+        --hf_novelty_sample_n 200000 \
+        --hf_scan_limit 1000000 \
+        --vocab csdnet_vocab.pkl \
+        --seed "$SEED" \
+        --n_mol 1000 \
+        --batch_size 128 \
+        --n_steps "$N_STEPS" \
+        --max_len 256 \
+        --output_dir "$RUN_DIR" \
+        --sampler_profile "$PROFILE" \
+        --unmask_selection top_prob \
+        --rdkit_check_interval 25 \
+        --max_sample_retries 3 \
+        --violation_neighborhood 2 \
+        --max_refill_factor 1.0
+
+    END_SECONDS=$(date +%s)
+    ELAPSED_SECONDS=$((END_SECONDS - START_SECONDS))
+
+    python evaluate_genmol_denovo_metrics.py \
+        --input "$RUN_DIR/generated_mols.txt" \
+        --output_dir "$RUN_DIR" \
+        --num_samples 1000 \
+        --qed_threshold 0.6 \
+        --sa_threshold 4.0 \
+        --fp_nbits 2048
+
+    python - "$RUN_DIR" "$EXPECTED_FSM" "$EXPECTED_RDKIT" "$ELAPSED_SECONDS" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+run_dir = Path(sys.argv[1])
+expected_fsm = sys.argv[2] == "true"
+expected_rdkit = sys.argv[3] == "true"
+elapsed = int(sys.argv[4])
+diagnostics_path = run_dir / "sampling_diagnostics.json"
+diagnostics = json.loads(diagnostics_path.read_text())
+metrics = json.loads((run_dir / "genmol_denovo_metrics.json").read_text())
+checks = {
+    "fsm": diagnostics.get("fsm_check") is expected_fsm,
+    "rdkit": diagnostics.get("rdkit_kekulize_check") is expected_rdkit,
+    "fsm_initialized": diagnostics.get("fsm_tracker_active") is expected_fsm,
+    "rdkit_initialized": diagnostics.get("rdkit_constraint_active") is expected_rdkit,
+    "strict_off": diagnostics.get("strict_final_sanitize") is False,
+    "proposals": int(diagnostics.get("proposals", -1)) == 1000,
+    "accepted": int(diagnostics.get("accepted", -1)) == 1000,
+    "empty": int(diagnostics.get("empty_rejections", -1)) == 0,
+    "sanitize_rejections": int(diagnostics.get("sanitization_rejections", -1)) == 0,
+    "requested": int(metrics.get("TotalRequested", -1)) == 1000,
+    "generated": int(metrics.get("TotalGenerated", -1)) == 1000,
+}
+expected_mode = (
+    "online_scan_progressive_completion_neural_then_projection"
+    if expected_fsm
+    else "disabled"
+)
+checks["constraint_mode"] = diagnostics.get("fsm_constraint_mode") == expected_mode
+failed = [name for name, passed in checks.items() if not passed]
+if failed:
+    raise SystemExit(f"Protocol audit failed: {failed}\n{diagnostics}")
+diagnostics["ablation_elapsed_seconds"] = elapsed
+diagnostics_path.write_text(json.dumps(diagnostics, indent=2, sort_keys=True))
+print(
+    f"Verified seed={diagnostics['seed']} FSM={expected_fsm} "
+    f"RDKit={expected_rdkit} validity={metrics['Validity']:.4f} "
+    f"quality={metrics['Quality']:.4f} elapsed={elapsed}s"
+)
+PY
+done
+
+echo "Constraint factorial complete: mode=$CONSTRAINT_MODE time=$(date)"
