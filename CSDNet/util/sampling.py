@@ -750,7 +750,7 @@ def sample_csdnet(
     all_position_rdkit_each_step=False,
     unmask_selection="top_prob",
     strict_final_sanitize=False,
-    max_refill_factor=1.25,
+    max_refill_factor=1,
     length_scheduler=None,
     length_scheduler_temperature=1.0,
     length_scheduler_top_k=16,
