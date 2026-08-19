@@ -1754,7 +1754,7 @@ def sample_elastic_csdnet(
     length_max=0,
     unmask_selection="top_prob",
     strict_final_sanitize=False,
-    max_refill_factor=1.25,
+    max_refill_factor=1,
     deterministic_final_unmask=True,
     return_diagnostics=False,
 ):
