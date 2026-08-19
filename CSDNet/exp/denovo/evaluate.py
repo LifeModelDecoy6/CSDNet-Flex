@@ -96,7 +96,7 @@ def parse_args():
     add_confidence_planning_arguments(parser)
     add_block_refinement_arguments(parser)
     parser.add_argument("--strict_final_sanitize", action="store_true")
-    parser.add_argument("--max_refill_factor", type=float, default=1.25)
+    parser.add_argument("--max_refill_factor", type=float, default=1)
     parser.add_argument(
         "--sampler_profile",
         choices=("custom", *SAMPLER_PROFILES),
